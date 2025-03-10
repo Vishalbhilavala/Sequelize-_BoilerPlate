@@ -27,7 +27,7 @@ module.exports = {
       const { error } = registration_Validation.validate(req.body);
 
       if (error) {
-        logger.error(error.message);
+        logger.error(message.VALIDATION_ERROR);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
@@ -99,7 +99,7 @@ module.exports = {
       const { error } = login_validation.validate(req.body);
 
       if (error) {
-        logger.error(error.message);
+        logger.error(message.VALIDATION_ERROR);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
@@ -208,7 +208,9 @@ module.exports = {
 
   getListOfUser: async (req, res) => {
     try {
+      const {page, data, sortBy, orderBy = "asc", search } = req.body;
       const users = await db.userModel.findAll({});
+      let filteredUser = users;
 
       if (!users) {
         logger.error(`Users ${message.NOT_FOUND}`);
@@ -222,13 +224,37 @@ module.exports = {
         );
       }
 
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filteredUser = users.filter((user) => {
+          return user.email.toLowerCase().includes(searchLower) ||
+            user.firstName.toLowerCase().includes(searchLower) ||
+            user.lastName.toLowerCase().includes(searchLower);
+        });
+      }
+
+      if (sortBy && filteredUser.length > 0) {
+        filteredUser.sort((a, b) => {
+          if (orderBy === "desc") {
+            return b[sortBy] > a[sortBy] ? 1 : -1;
+          } else {
+            return a[sortBy] > b[sortBy] ? 1 : -1;
+          }
+        });
+      }
+
+      let StartIndex = (page - 1) * data;
+      let EndIndex = StartIndex + data;
+      const show = filteredUser.slice(StartIndex, EndIndex);
+
+
       logger.info(`Users ${message.GET_SUCCESS}`);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.OK,
           `Users ${message.GET_SUCCESS}`,
-          { users }
+          { users: show }
         )
       );
     } catch (error) {
