@@ -371,7 +371,7 @@ module.exports = {
           response.RESPONSE_SUCCESS,
           StatusCodes.OK,
           `User ${message.UPDATED_SUCCESS}`,
-          { user: updatedUser }
+          undefined
         )
       );
     } catch (error) {
