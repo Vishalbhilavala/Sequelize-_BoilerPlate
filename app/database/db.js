@@ -28,6 +28,7 @@ db.userModel = require('../models/userModel')(sequelize, Sequelize)
 db.Imagies = require('../models/imagies')(sequelize, Sequelize)
 db.OTPS = require('../models/otp_verifications')(sequelize, Sequelize)
 db.Category = require('../models/categoryModel')(sequelize, Sequelize);
+db.Portfolio = require('../models/portfolioModel')(sequelize, Sequelize);
 
 db.sequelize.sync({force: false}).then(() =>{
     logger.info('Database synchronized successfully.')

@@ -17,6 +17,16 @@ module.exports = (sequelize, Sequelize) => {
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE',
         },
+        portfolioId: {
+          type: Sequelize.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'Portfolios',
+            key: 'id',
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
+        },
         imagePath: {
           type: Sequelize.STRING(255),
           allowNull: true,
