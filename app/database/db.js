@@ -1,15 +1,15 @@
 const Sequelize = require('sequelize');
 const logger = require('../services/logger')
-require('dotenv').config()
+require('dotenv').config({path:require('path').join(__dirname, '../../.env')})
 
 const sequelize = new Sequelize(
-    'sequelize-boiler-plate',
-    'root',
-    'RAMJIBHAI@BHILAVALA78',
+    process.env.DATABASE_NAME,
+    process.env.DATABASE_USER_NAME,
+    process.env.DATABASE_PASSWORD,
     {
-        dialect: 'mysql',
-        host: 'localhost',
-        port: 3306,
+        dialect: process.env.DIALECT,
+        host: process.env.HOST,
+        port: process.env.DB_PORT,
         logging: false
     }
 );

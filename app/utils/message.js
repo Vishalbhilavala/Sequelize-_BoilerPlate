@@ -11,7 +11,6 @@ module.exports = {
     OTP_EXPIRED: 'OTP is expired',
     OTP_INVALID : 'Please enter correct otp.',
     OTP_VERIFIED_SUCCESS : 'is verified successfully.',
-    SAME_PASSWORD_ERROR: 'Provide another password',
     REGISTER_SUCCESS : 'You are registered successfully.',
     CURRENT_PASSWORD_INVALID : 'Your current password is invalid.',
     LOGIN_SUCCESS : 'You are login successfully.',
