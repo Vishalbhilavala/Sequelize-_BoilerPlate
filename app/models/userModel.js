@@ -51,10 +51,6 @@ module.exports = (sequelize, Sequelize) => {
           isNumeric: true,
         },
       },
-      image: {
-        type: Sequelize.STRING,
-        allowNull: true
-      }
     },
     {
       freezeTableName: true,
@@ -67,6 +63,7 @@ module.exports = (sequelize, Sequelize) => {
   userModel.associate = (models) => {
     userModel.hasMany(models.Imagies, {
       foreignKey: 'userId',
+      as: 'imagies',
     });
   };
   

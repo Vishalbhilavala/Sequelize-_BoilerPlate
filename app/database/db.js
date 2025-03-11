@@ -29,6 +29,8 @@ db.Imagies = require('../models/imagies')(sequelize, Sequelize)
 db.OTPS = require('../models/otp_verifications')(sequelize, Sequelize)
 db.Category = require('../models/categoryModel')(sequelize, Sequelize);
 
+db.userModel.associate(db)
+
 db.sequelize.sync({force: false}).then(() =>{
     logger.info('Database synchronized successfully.')
 }).catch((error) => {

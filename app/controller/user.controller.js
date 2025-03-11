@@ -59,7 +59,6 @@ module.exports = {
       const user = await db.userModel.create({
         email,
         password: hashedPassword,
-        image,
         ...rest,
       });
 
@@ -209,7 +208,13 @@ module.exports = {
   getListOfUser: async (req, res) => {
     try {
       const {page, data, sortBy, orderBy = "asc", search } = req.body;
-      const users = await db.userModel.findAll({});
+      const users = await db.userModel.findAll({
+        include: {
+          model: db.Imagies,
+          as: "imagies",
+          attributes: ["imagePath"],
+        }
+      });
       let filteredUser = users;
 
       if (!users) {
