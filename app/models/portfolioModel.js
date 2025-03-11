@@ -23,10 +23,6 @@ module.exports = (sequelize, Sequelize) => {
                 type: Sequelize.TEXT,
                 allowNull: true,
             },
-            image: {
-                type: Sequelize.STRING,
-                allowNull: true
-              }
         },
         {
             freezeTableName: true,
@@ -35,5 +31,12 @@ module.exports = (sequelize, Sequelize) => {
             updatedAt: 'updated_at',
         }
     );
+
+    Portfolio.associate = (models) => {
+        Portfolio.hasMany(models.Imagies, {
+            foreignKey: 'portfolioId',
+            as: 'imagies'
+        });
+    };
     return Portfolio;
 }

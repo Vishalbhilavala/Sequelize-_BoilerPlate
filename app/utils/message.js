@@ -19,5 +19,5 @@ module.exports = {
     INTERNAL_SERVER_ERROR: `Internal server error.`,
     OTP_ERROR : `Error to send otp`,
     VALIDATION_ERROR: `Validation error.`,
-    AT_LEAST_ONE : "At least one field (firstName, lastName, hobby, gender, phone, image) must be provided to update the profile."
+    AT_LEAST_ONE : "At least one field must be provided to update the profile."
 }

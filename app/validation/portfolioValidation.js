@@ -21,4 +21,24 @@ const portfolioValidate = joi.object({
     }),
 });
 
-module.exports =  { portfolioValidate }
+const portfolioUpdateValidate = joi.object({
+    id: joi.number().empty().required().messages({
+        "number.base": "id must be a number.",
+        "number.empty": "id cannot be empty.",
+        "any.required": "id is a required field.",
+    }),
+    product_name: joi.string().empty().messages({
+        "string.base": "product name must be a string.",
+        "string.empty": "product name cannot be empty.",
+    }),
+    description: joi.string().empty().messages({
+        "string.base": "description must be a string.",
+        "string.empty": "description cannot be empty.",
+    }),
+    image: joi.string().empty().messages({
+        "string.base": "image must be a string.",
+        "string.empty": "image cannot be empty.",
+    }),
+})
+
+module.exports =  { portfolioValidate, portfolioUpdateValidate }
