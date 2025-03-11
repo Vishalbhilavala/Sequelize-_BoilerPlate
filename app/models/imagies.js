@@ -33,7 +33,7 @@ module.exports = (sequelize, Sequelize) => {
     Imagies.associate = (models) => {
       Imagies.belongsTo(models.userModel, {
         foreignKey: 'userId',
-        as : ''
+        as : 'user'
       });
     };
     return Imagies;
