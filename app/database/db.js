@@ -33,6 +33,8 @@ db.Portfolio = require('../models/portfolioModel')(sequelize, Sequelize);
 db.Portfolio.associate(db);
 db.Imagies.associate(db);
 
+db.userModel.associate(db)
+
 db.sequelize.sync({force: false}).then(() =>{
     logger.info('Database synchronized successfully.')
 }).catch((error) => {
