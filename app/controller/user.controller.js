@@ -1,13 +1,13 @@
 const db = require('../database/db');
+require('dotenv').config();;
 const Bcrypt = require('bcrypt');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const sendOTPToEmail = require('../middleware/otpSend');
 const logger = require('../services/logger');
 const { HandleResponse } = require('../services/errorHandle');
-const { GeneralError, BadRequest } = require('../utils/error');
-const { response } = require('../utils/enum');
-const { StatusCodes } = require('http-status-codes');
+const {  response  } = require('../utils/enum');
+const {  StatusCodes  } = require('http-status-codes');
 const message = require('../utils/message');
 const { GeneralResponse } = require('../utils/responce');
 const {
