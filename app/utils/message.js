@@ -1,0 +1,23 @@
+module.exports = {
+    DATABASE_CONNECTION: `Database is connected on "${process.env.DATABASE}"`,
+    DATABASE_CONNECTION_ERROR: `Error in db connection`,
+    ALREADY_EXIST : 'is already exist.',
+    NOT_FOUND: 'is not found',
+    UPDATED_SUCCESS : 'is updated successfully.',
+    GET_SUCCESS : 'is retrieved successfully.',
+    ADD_SUCCESS : 'is added successfully.',
+    DELETE_SUCCESS : 'is deleted successfully.',
+    OTP_SENT : 'OTP has been sent to your',
+    OTP_EXPIRED: 'OTP is expired',
+    OTP_INVALID : 'Please enter correct otp.',
+    OTP_VERIFIED_SUCCESS : 'is verified successfully.', 
+    INVALID_CREDENTIALS_PASS: 'Invalid credentials',
+    REGISTER_SUCCESS : 'You are registered successfully.',
+    CURRENT_PASSWORD_INVALID : 'Your current password is invalid.',
+    LOGIN_SUCCESS : 'You are login successfully.',
+    FILE_NOT_FOUND: 'No file uploaded.',
+    INTERNAL_SERVER_ERROR: `Internal server error.`,
+    OTP_ERROR : `Error to send otp`,
+    VALIDATION_ERROR: `Validation error.`,
+    AT_LEAST_ONE : "At least one field must be provided to update the profile."
+}
