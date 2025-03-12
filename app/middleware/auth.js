@@ -3,6 +3,7 @@ const message = require('../utils/message');
 const logger = require('../services/logger');
 const { StatusCodes } = require('http-status-codes');
 const { response } = require('../utils/enum');
+const { HandleResponse } = require('../services/errorHandle');
 require('dotenv').config();
 
 module.exports = {
@@ -26,11 +27,15 @@ module.exports = {
       next();
     } catch (error) {
       logger.error(error);
-      return res.status(400).json({
-        statusCode: StatusCodes.BAD_REQUEST,
-        status: response.RESPONSE_ERROR,
-        error: error,
-      });
+      return res.json(
+        HandleResponse(
+          StatusCodes.BAD_REQUEST,
+          response.RESPONSE_ERROR,
+          message.INVALID_CREDENTIALS_PASS,
+          undefined,
+          error || error.message,
+        ),
+      );
     }
   },
 };
