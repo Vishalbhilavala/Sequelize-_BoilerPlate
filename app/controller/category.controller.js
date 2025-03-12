@@ -11,6 +11,7 @@ module.exports = {
   createCategory: async (req, res) => {
     try {
       const { category_name } = req.body;
+
       const { error } = categoryValidate.validate(req.body);
 
       if (error) {
@@ -76,9 +77,29 @@ module.exports = {
 
   getListOfCategory: async (req, res) => {
     try {
-      const { page, data, sortBy, orderBy = 'asc', search } = req.body;
-      const category = await db.Category.findAll({});
-      let filteredCategory = category;
+      const { page, limit, sortBy, orderBy, searchTerm } = req.body;
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10);
+      const offset = (pageNumber - 1) * limitNumber;
+
+      let filterOperation = {};
+
+      if (searchTerm) {
+        filterOperation = {
+          [db.Sequelize.Op.or]: [
+            { category_name: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
+          ],
+        };
+      }
+
+      const category = await db.Category.findAll({
+        where: {
+          ...filterOperation,
+        },
+        offset: offset,
+        limit: limitNumber,
+        order: [[sortBy, orderBy]],
+      });
 
       if (!category) {
         logger.error(`Category ${message.NOT_FOUND}`);
@@ -92,34 +113,13 @@ module.exports = {
         );
       }
 
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredCategory = category.filter((category) =>
-          category.category_name.toLowerCase().includes(searchLower)
-        );
-      }
-
-      if (sortBy && filteredCategory.length > 0) {
-        filteredCategory.sort((a, b) => {
-          if (orderBy === 'desc') {
-            return b[sortBy] > a[sortBy] ? 1 : -1;
-          } else {
-            return a[sortBy] > b[sortBy] ? 1 : -1;
-          }
-        });
-      }
-
-      let StartIndex = (page - 1) * data;
-      let EndIndex = StartIndex + data;
-      const show = filteredCategory.slice(StartIndex, EndIndex);
-
       logger.info(`Category ${message.GET_SUCCESS}`);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.OK,
           `Category ${message.GET_SUCCESS}`,
-          { Category: show }
+          { Category: category }
         )
       );
     } catch (error) {
@@ -178,8 +178,9 @@ module.exports = {
 
   updateCategory: async (req, res) => {
     try {
-      const { id, category_name } = req.body;
-      const { error } = categoryValidate.validate({ category_name });
+      const { id } = req.params;
+      
+      const { error } = categoryValidate.validate( req.body );
 
       if (error) {
         logger.error(message.VALIDATION_ERROR);
@@ -208,40 +209,17 @@ module.exports = {
         );
       }
 
-      const findCategoryName = await db.Category.findOne({
-        where: {
-          category_name: db.Sequelize.where(
-            db.Sequelize.fn('LOWER', db.Sequelize.col('category_name')),
-            category_name.toLowerCase()
-          ),
-        },
-      });
-
-      if (findCategoryName) {
-        logger.error(`Category ${message.ALREADY_EXIST}`);
-        return res.json(
-          HandleResponse(
-            response.RESPONSE_ERROR,
-            StatusCodes.BAD_REQUEST,
-            `Category ${message.ALREADY_EXIST}`,
-            undefined
-          )
-        );
-      }
-
       await db.Category.update(
-        {
-          category_name: category_name || categoryExisted.category_name,
-        },
+        req.body,
         { where: { id: categoryExisted.id } }
       );
 
-      logger.info(`Category ${(message, message.UPDATED_SUCCESS)}`);
+      logger.info(`Category ${message.UPDATED_SUCCESS}`);
       return res.json(
         HandleResponse(
           response.RESPONSE_SUCCESS,
           StatusCodes.OK,
-          `Category ${(message, message.UPDATED_SUCCESS)}`,
+          `Category ${message.UPDATED_SUCCESS}`,
           undefined
         )
       );

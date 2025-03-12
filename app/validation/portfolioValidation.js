@@ -22,11 +22,6 @@ const portfolioValidate = joi.object({
 });
 
 const portfolioUpdateValidate = joi.object({
-    id: joi.number().empty().required().messages({
-        "number.base": "id must be a number.",
-        "number.empty": "id cannot be empty.",
-        "any.required": "id is a required field.",
-    }),
     product_name: joi.string().empty().messages({
         "string.base": "product name must be a string.",
         "string.empty": "product name cannot be empty.",

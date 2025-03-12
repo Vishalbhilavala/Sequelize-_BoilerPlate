@@ -13,7 +13,6 @@ const {
 module.exports = {
   createPortfolio: async (req, res) => {
     try {
-      const { category_id, product_name, description, image } = req.body;
       const { error } = portfolioValidate.validate(req.body);
 
       if (error) {
@@ -22,23 +21,18 @@ module.exports = {
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
+            error.details[0].message,
             undefined,
-            error.details[0].message
           )
         );
       }
 
-      const portfolio = await db.Portfolio.create({
-        category_id,
-        product_name,
-        description,
-      });
+      const portfolio = await db.Portfolio.create(req.body);
 
-      if (image) {
+      if (req.body.image) {
         await db.Imagies.create({
           portfolioId: portfolio.id,
-          imagePath: image,
+          imagePath: req.body.image,
         });
       }
 
@@ -57,9 +51,8 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -96,9 +89,8 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -106,15 +98,35 @@ module.exports = {
 
   getListOfPortfolio: async (req, res) => {
     try {
-      const { page, data, sortBy, orderBy = 'asc', search } = req.body;
+      const { page, limit, sortBy, orderBy, searchTerm } = req.body;
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10);
+      const offset = (pageNumber - 1) * limitNumber;
+
+      let filterOperation = {};
+
+      if (searchTerm) {
+        filterOperation = {
+          [db.Sequelize.Op.or]: [
+            { product_name: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
+            { description: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
+          ],
+        };
+      }
+
       const portfolio = await db.Portfolio.findAll({
+        where: {
+          ...filterOperation,
+        },
+        offset: offset,
+        limit: limitNumber,
+        order: [[sortBy, orderBy]],
         include: {
           model: db.Imagies,
           as: 'imagies',
           attributes: ['imagePath'],
         },
       });
-      let filteredPortfolio = portfolio;
 
       if (!portfolio) {
         logger.error(`Portfolio ${message.NOT_FOUND}`);
@@ -128,35 +140,13 @@ module.exports = {
         );
       }
 
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredPortfolio = portfolio.filter((portfolio) => {
-          return portfolio.product_name.toLowerCase().includes(searchLower);
-        });
-      }
-
-      if (sortBy && filteredPortfolio.length > 0) {
-        filteredPortfolio.sort((a, b) => {
-          if (orderBy === 'desc') {
-            return b[sortBy] > a[sortBy] ? 1 : -1;
-          } else {
-            return a[sortBy] > b[sortBy] ? 1 : -1;
-          }
-        });
-      }
-
-      let StartIndex = (page - 1) * data;
-      let EndIndex = StartIndex + data;
-
-      let portfolioData = filteredPortfolio.slice(StartIndex, EndIndex);
-
       logger.info(`Portfolio ${message.GET_SUCCESS}`);
       return res.json(
         HandleResponse(
           response.RESPONSE_SUCCESS,
           StatusCodes.OK,
           `Portfolio ${message.GET_SUCCESS}`,
-          { portfolioData }
+          { portfolio }
         )
       );
     } catch (error) {
@@ -205,9 +195,8 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -215,8 +204,9 @@ module.exports = {
 
   updatePortfolio: async (req, res) => {
     try {
-      const { id, product_name, description, image } = req.body;
-      const { error } = portfolioUpdateValidate.validate(req.body);
+      const { id } = req.params;
+
+      const { error } = portfolioUpdateValidate.validate( req.body );
 
       if (error) {
         logger.error(message.VALIDATION_ERROR);
@@ -224,21 +214,8 @@ module.exports = {
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
+            error.details[0].message,
             undefined,
-            error.details[0].message
-          )
-        );
-      }
-
-      if (!product_name && !description && !image) {
-        logger.error(message.AT_LEAST_ONE);
-        return res.json(
-          HandleResponse(
-            response.RESPONSE_ERROR,
-            StatusCodes.BAD_REQUEST,
-            message.AT_LEAST_ONE,
-            undefined
           )
         );
       }
@@ -256,15 +233,28 @@ module.exports = {
           )
         );
       }
-      
+
       await db.Portfolio.update(
-        {
-          product_name: product_name || portfolio.product_name,
-          description: description || portfolio.description,
-          image: image || portfolio.image,
-        },
+        req.body,
         { where: { id: portfolio.id } }
       );
+
+      const updatedPortfolio = await db.Portfolio.findOne({ where: { id } });
+
+      if(req.body.image) {
+        const image = await db.Imagies.findOne({ where: { portfolioId: updatedPortfolio.id } })
+        if(image) {
+          await db.Imagies.update(
+            { imagePath: req.body.image },
+            { where: { portfolioId: updatedPortfolio.id } }
+          );
+        } else {
+          await db.Imagies.create({
+            portfolioId: updatedPortfolio.id,
+            imagePath: req.body.image,
+          });
+        }
+      }
 
       logger.info(`Portfolio ${message.UPDATED_SUCCESS}`);
       return res.json(
@@ -323,9 +313,8 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
