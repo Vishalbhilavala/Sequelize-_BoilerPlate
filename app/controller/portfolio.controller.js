@@ -256,6 +256,7 @@ module.exports = {
           )
         );
       }
+      
       await db.Portfolio.update(
         {
           product_name: product_name || portfolio.product_name,

@@ -3,6 +3,7 @@ const message = require('../utils/message');
 const logger = require('../services/logger');
 const { StatusCodes } = require('http-status-codes');
 const { response } = require('../utils/enum');
+const { HandleResponse } = require('../services/errorHandle');
 require('dotenv').config();
 
 module.exports = {
@@ -11,11 +12,14 @@ module.exports = {
 
     if (!token) {
       logger.error(message.INVALID_CREDENTIALS_PASS);
-      return res.status(200).json({
-        statusCode: StatusCodes.NOT_FOUND,
-        status: response.RESPONSE_ERROR,
-        message: message.INVALID_CREDENTIALS_PASS,
-      });
+      return res.json(
+        HandleResponse(
+          response.RESPONSE_ERROR,
+          StatusCodes.NOT_FOUND,
+          message.INVALID_CREDENTIALS_PASS,
+          undefined,
+        )
+      );
     }
 
     const secret = process.env.JWT_SECRET_KEY;
@@ -26,11 +30,15 @@ module.exports = {
       next();
     } catch (error) {
       logger.error(error);
-      return res.status(400).json({
-        statusCode: StatusCodes.BAD_REQUEST,
-        status: response.RESPONSE_ERROR,
-        error: error,
-      });
+      return res.json(
+        HandleResponse(
+          response.RESPONSE_ERROR,
+          StatusCodes.BAD_REQUEST,
+          message.INVALID_CREDENTIALS_PASS,
+          undefined,
+          error || error.message,
+        ),
+      );
     }
   },
 };
