@@ -252,7 +252,6 @@ module.exports = {
       let EndIndex = StartIndex + data;
       const show = filteredUser.slice(StartIndex, EndIndex);
 
-
       logger.info(`Users ${message.GET_SUCCESS}`);
       return res.json(
         HandleResponse(
@@ -380,7 +379,6 @@ module.exports = {
           hobby: hobby || findUser.hobby,
           gender: gender || findUser.gender,
           phone: phone || findUser.phone,
-          image: image || findUser.image,
         },
         { where: { id: findUser.id } }
       );
