@@ -1,6 +1,6 @@
 const db = require('../database/db');
 require('dotenv').config();;
-const Bcrypt = require('bcrypt');
+const bcrypt = require('bcrypt');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const sendOTPToEmail = require('../middleware/otpSend');
@@ -24,6 +24,7 @@ module.exports = {
   registration: async (req, res) => {
     try {
       const { email, password, image, ...rest } = req.body;
+
       const { error } = registration_Validation.validate(req.body);
 
       if (error) {
@@ -53,8 +54,8 @@ module.exports = {
         );
       }
 
-      const salt = await Bcrypt.genSalt(10);
-      const hashedPassword = await Bcrypt.hash(password, salt);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
 
       const user = await db.userModel.create({
         email,
@@ -95,6 +96,7 @@ module.exports = {
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
+
       const { error } = login_validation.validate(req.body);
 
       if (error) {
@@ -124,7 +126,7 @@ module.exports = {
         );
       }
 
-      const isPasswordCorrect = await Bcrypt.compare(password, user.password);
+      const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
       if (!isPasswordCorrect) {
         logger.error(message.INVALID_CREDENTIALS_PASS);
@@ -207,15 +209,35 @@ module.exports = {
 
   getListOfUser: async (req, res) => {
     try {
-      const {page, data, sortBy, orderBy = "asc", search } = req.body;
+      const { page, limit, sortBy, orderBy, searchTerm } = req.body;
+      const pageNumber = parseInt(page, 10);
+      const limitNumber = parseInt(limit, 10);
+      const offset = (pageNumber - 1) * limitNumber;
+
+      let filterOperation = {};
+
+      if (searchTerm) {
+        filterOperation = {
+          [db.Sequelize.Op.or]: [
+            { firstName: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
+            { lastName: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
+          ],
+        };
+      }
+
       const users = await db.userModel.findAll({
+        where: {
+          ...filterOperation,
+        },
+        offset: offset,
+        limit: limitNumber,
+        order: [[sortBy, orderBy]],
         include: {
           model: db.Imagies,
-          as: "imagies",
+          as: 'imagies',
           attributes: ["imagePath"],
-        }
+        },
       });
-      let filteredUser = users;
 
       if (!users) {
         logger.error(`Users ${message.NOT_FOUND}`);
@@ -229,36 +251,13 @@ module.exports = {
         );
       }
 
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredUser = users.filter((user) => {
-          return user.email.toLowerCase().includes(searchLower) ||
-            user.firstName.toLowerCase().includes(searchLower) ||
-            user.lastName.toLowerCase().includes(searchLower);
-        });
-      }
-
-      if (sortBy && filteredUser.length > 0) {
-        filteredUser.sort((a, b) => {
-          if (orderBy === "desc") {
-            return b[sortBy] > a[sortBy] ? 1 : -1;
-          } else {
-            return a[sortBy] > b[sortBy] ? 1 : -1;
-          }
-        });
-      }
-
-      let StartIndex = (page - 1) * data;
-      let EndIndex = StartIndex + data;
-      const show = filteredUser.slice(StartIndex, EndIndex);
-
       logger.info(`Users ${message.GET_SUCCESS}`);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.OK,
           `Users ${message.GET_SUCCESS}`,
-          { users: show }
+          { users }
         )
       );
     } catch (error) {
@@ -278,6 +277,7 @@ module.exports = {
   viewProfile: async (req, res) => {
     try {
       const { id } = req.user_data;
+
       const user = await db.userModel.findOne({
         where: { id },
         attributes: { exclude: ['password'] },
@@ -322,16 +322,8 @@ module.exports = {
   updateProfile: async (req, res) => {
     try {
       const { id } = req.user_data;
-      const { firstName, lastName, hobby, gender, phone, image } = req.body;
-      const { error } = update_Validation.validate({
-        id,
-        firstName,
-        lastName,
-        hobby,
-        gender,
-        phone,
-        image,
-      });
+
+      const { error } = update_Validation.validate( req.body );
 
       if (error) {
         logger.error(message.VALIDATION_ERROR);
@@ -341,19 +333,7 @@ module.exports = {
             StatusCodes.BAD_REQUEST,
             message.VALIDATION_ERROR,
             undefined,
-            error.details[0].message
-          )
-        );
-      }
-
-      if (!firstName && !lastName && !hobby && !gender && !phone && !image) {
-        logger.error(message.AT_LEAST_ONE);
-        return res.json(
-          HandleResponse(
-            response.RESPONSE_ERROR,
-            StatusCodes.BAD_REQUEST,
-            message.AT_LEAST_ONE,
-            undefined
+            error.details[0].message,
           )
         );
       }
@@ -373,13 +353,7 @@ module.exports = {
       }
 
       await db.userModel.update(
-        {
-          firstName: firstName || findUser.firstName,
-          lastName: lastName || findUser.lastName,
-          hobby: hobby || findUser.hobby,
-          gender: gender || findUser.gender,
-          phone: phone || findUser.phone,
-        },
+        req.body,
         { where: { id: findUser.id } }
       );
 
@@ -387,10 +361,11 @@ module.exports = {
         where: { id: findUser.id },
       });
 
-      if (image) {
-        await db.Imagies.upsert({
-          userId: findUser.id,
-          imagePath: image,
+      if (req.body.image) {
+        await db.Imagies.destroy({ where: { userId: updatedUser.id } });
+        await db.Imagies.create({
+          userId: updatedUser.id,
+          imagePath: req.body.image,
         });
       }
 
@@ -420,12 +395,8 @@ module.exports = {
   updatePassword: async (req, res) => {
     try {
       const { id } = req.user_data;
-      const { newPassword, confirmNewPassword } = req.body;
-      const { error } = updatePassword_Validation.validate({
-        id,
-        newPassword,
-        confirmNewPassword,
-      });
+
+      const { error } = updatePassword_Validation.validate( req.body );
 
       if (error) {
         logger.error(message.VALIDATION_ERROR);
@@ -454,8 +425,8 @@ module.exports = {
         );
       }
 
-      const salt = await Bcrypt.genSalt(10);
-      const hashedPassword = await Bcrypt.hash(newPassword, salt);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash( req.body.newPassword, salt );
 
       await db.userModel.update(
         { password: hashedPassword },
@@ -487,8 +458,7 @@ module.exports = {
 
   verifyEmail: async (req, res) => {
     try {
-      const { email } = req.body;
-      const { error } = emailValidate.validate({ email });
+      const { error } = emailValidate.validate( req.body );
 
       if (error) {
         logger.error(message.VALIDATION_ERROR);
@@ -503,7 +473,7 @@ module.exports = {
         );
       }
 
-      const user = await db.userModel.findOne({ where: { email } });
+      const user = await db.userModel.findOne({ where: { email: req.body.email } });
 
       if (!user) {
         logger.error(`User ${message.NOT_FOUND}`);
@@ -544,7 +514,6 @@ module.exports = {
 
   verifyOTP: async (req, res) => {
     try {
-      const { otp, email } = req.body;
       const { error } = otp_validate.validate(req.body);
 
       if (error) {
@@ -560,7 +529,7 @@ module.exports = {
         );
       }
 
-      const user = await db.userModel.findOne({ where: { email } });
+      const user = await db.userModel.findOne({ where: { email: req.body.email } });
 
       if (!user) {
         logger.error(`User ${message.NOT_FOUND}`);
@@ -574,10 +543,10 @@ module.exports = {
         );
       }
 
-      const otp_user = await db.OTPS.findOne({ where: { email } });
+      const otp_user = await db.OTPS.findOne({ where: { email: user.email } });
 
       if (!otp_user) {
-        await db.OTPS.destroy({ where: { email } });
+        await db.OTPS.destroy({ where: { email: user.email } });
         logger.error(message.OTP_EXPIRED);
         return res.json(
           HandleResponse(
@@ -589,8 +558,8 @@ module.exports = {
         );
       }
 
-      if (otp_user.otp !== otp) {
-        await db.OTPS.destroy({ where: { email } });
+      if (otp_user.otp !== req.body.otp) {
+        await db.OTPS.destroy({ where: { email: user.email } });
         logger.error(message.OTP_INVALID);
         return res.json(
           HandleResponse(
@@ -605,7 +574,7 @@ module.exports = {
       const currentTime = new Date();
 
       if (otp_user.expiresAt < currentTime) {
-        await db.OTPS.destroy({ where: { email } });
+        await db.OTPS.destroy({ where: { email: user.email } });
         logger.error(message.OTP_EXPIRED);
         return res.json(
           HandleResponse(
@@ -617,7 +586,7 @@ module.exports = {
         );
       }
 
-      await db.OTPS.destroy({ where: { email } });
+      await db.OTPS.destroy({ where: { email: user.email } });
       logger.info(`OTP ${message.OTP_VERIFIED_SUCCESS}`);
       return res.json(
         HandleResponse(
@@ -643,7 +612,6 @@ module.exports = {
 
   forgotPassword: async (req, res) => {
     try {
-      const { email, newPassword, confirmNewPassword } = req.body;
       const { error } = forgotPassword_validate.validate(req.body);
 
       if (error) {
@@ -659,7 +627,7 @@ module.exports = {
         );
       }
 
-      const user = await db.userModel.findOne({ where: { email } });
+      const user = await db.userModel.findOne({ where: { email: req.body.email } });
 
       if (!user) {
         logger.error(`User ${message.NOT_FOUND}`);
@@ -673,8 +641,11 @@ module.exports = {
         );
       }
 
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash( req.body.newPassword, salt );
+
       await db.userModel.update(
-        { password: newPassword },
+        { password: hashedPassword },
         { where: { email: user.email } }
       );
 

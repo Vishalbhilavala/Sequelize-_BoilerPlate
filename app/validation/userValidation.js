@@ -77,13 +77,6 @@ const login_validation = joi.object({
 });
 
 const update_Validation = joi.object({
-  id: joi.number().integer().positive().required().messages({
-    'number.base': 'ID must be a number',
-    'number.integer': 'ID must be an integer',
-    'number.positive': 'ID must be a positive number',
-    'any.required': 'password is a required.',
-  }),
-
   firstName: joi.string().empty().messages({
     'string.base': 'firstName must be a string.',
     'string.empty': 'firstName cannot be empty.',
@@ -124,12 +117,6 @@ const update_Validation = joi.object({
 });
 
 const updatePassword_Validation = joi.object({
-  id: joi.number().integer().positive().required().messages({
-    'number.base': 'ID must be a number',
-    'number.integer': 'ID must be an integer',
-    'number.positive': 'ID must be a positive number',
-    'any.required': 'ID is a required.',
-  }),
   newPassword: joi.string().empty().required().messages({
     'string.base': 'newPassword must be a string.',
     'string.empty': 'newPassword cannot be empty.',
@@ -169,6 +156,7 @@ const otp_validate = joi.object({
     'any.required': 'email is required.',
   }),
 });
+
 const forgotPassword_validate = joi.object({
   email: joi.string().email().empty().required().messages({
     'string.email': 'invalid email format.',
