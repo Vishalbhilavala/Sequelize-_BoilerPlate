@@ -14,7 +14,7 @@ const registration_Validation = joi.object({
     'any.required': 'lastName is required.',
   }),
 
-  hobby: joi.string().empty().messages({
+  hobby: joi.string().empty().optional().messages({
     'string.base': 'hobby must be a string.',
     'string.empty': 'hobby cannot be empty.',
   }),
@@ -55,7 +55,7 @@ const registration_Validation = joi.object({
       'string.empty': 'Phone number cannot be empty.',
       'any.required': 'Phone number is required.',
     }),
-  image: joi.string().empty().messages({
+  image: joi.string().empty().optional().messages({
     'string.base': 'image ID must be an string.',
     'string.empty': 'image cannot be empty.',
   }),
@@ -77,17 +77,17 @@ const login_validation = joi.object({
 });
 
 const update_Validation = joi.object({
-  firstName: joi.string().empty().messages({
+  firstName: joi.string().empty().optional().messages({
     'string.base': 'firstName must be a string.',
     'string.empty': 'firstName cannot be empty.',
   }),
 
-  lastName: joi.string().empty().messages({
+  lastName: joi.string().empty().optional().messages({
     'string.base': 'lastName must be a string.',
     'string.empty': 'lastName cannot be empty.',
   }),
 
-  hobby: joi.string().empty().messages({
+  hobby: joi.string().empty().optional().messages({
     'string.base': 'hobby must be a string.',
     'string.empty': 'hobby cannot be empty.',
   }),
@@ -96,6 +96,7 @@ const update_Validation = joi.object({
     .string()
     .empty()
     .valid(gender.MALE, gender.FEMALE, gender.OTHER)
+    .optional()
     .messages({
       'string.base': 'gender must be a string.',
       'string.empty': 'gender cannot be empty.',
@@ -104,19 +105,26 @@ const update_Validation = joi.object({
   phone: joi
     .string()
     .pattern(/^[0-9]+$/)
+    .empty()
+    .optional()
     .messages({
       'string.base': 'Phone number must be a string.',
       'string.pattern.base':
         'Phone number must be numeric and contain only digits.',
       'string.empty': 'Phone number cannot be empty.',
     }),
-  image: joi.string().empty().messages({
+  image: joi.string().empty().optional().messages({
     'string.base': 'image ID must be an string.',
     'string.empty': 'image cannot be empty.',
   }),
 });
 
 const updatePassword_Validation = joi.object({
+  oldPassword: joi.string().empty().required().messages({
+    'string.base': 'oldPassword must be a string.',
+    'string.empty': 'oldPassword cannot be empty.',
+    'any.required': 'oldPassword is a required field.',
+  }),
   newPassword: joi.string().empty().required().messages({
     'string.base': 'newPassword must be a string.',
     'string.empty': 'newPassword cannot be empty.',
@@ -188,5 +196,5 @@ module.exports = {
   updatePassword_Validation,
   emailValidate,
   otp_validate,
-  forgotPassword_validate
+  forgotPassword_validate,
 };

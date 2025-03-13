@@ -13,10 +13,8 @@ module.exports = {
     OTP_VERIFIED_SUCCESS : 'is verified successfully.', 
     INVALID_CREDENTIALS_PASS: 'Invalid credentials',
     REGISTER_SUCCESS : 'You are registered successfully.',
-    CURRENT_PASSWORD_INVALID : 'Your current password is invalid.',
     LOGIN_SUCCESS : 'You are login successfully.',
     FILE_NOT_FOUND: 'No file uploaded.',
-    INTERNAL_SERVER_ERROR: `Internal server error.`,
-    OTP_ERROR : `Error to send otp`,
-    VALIDATION_ERROR: `Validation error.`,
+    INTERNAL_SERVER_ERROR: `Internal server error.`,    
+    NOT_EXIST: `is not exist.`,
 }

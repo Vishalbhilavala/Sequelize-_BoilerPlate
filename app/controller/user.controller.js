@@ -1,13 +1,13 @@
 const db = require('../database/db');
-require('dotenv').config();;
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const sendOTPToEmail = require('../middleware/otpSend');
 const logger = require('../services/logger');
 const { HandleResponse } = require('../services/errorHandle');
-const {  response  } = require('../utils/enum');
-const {  StatusCodes  } = require('http-status-codes');
+const { response } = require('../utils/enum');
+const { StatusCodes } = require('http-status-codes');
 const message = require('../utils/message');
 const { GeneralResponse } = require('../utils/responce');
 const {
@@ -23,24 +23,25 @@ const {
 module.exports = {
   registration: async (req, res) => {
     try {
-      const { email, password, image, ...rest } = req.body;
+      const { password, ...rest } = req.body;
 
       const { error } = registration_Validation.validate(req.body);
 
       if (error) {
-        logger.error(message.VALIDATION_ERROR);
+        logger.error(error.details[0].message);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
-            undefined,
-            error.details[0].message
+            error.details[0].message,
+            undefined
           )
         );
       }
 
-      const existingUser = await db.userModel.findOne({ where: { email } });
+      const existingUser = await db.userModel.findOne({
+        where: { email: req.body.email },
+      });
 
       if (existingUser) {
         logger.error(`User ${message.ALREADY_EXIST}`);
@@ -58,15 +59,14 @@ module.exports = {
       const hashedPassword = await bcrypt.hash(password, salt);
 
       const user = await db.userModel.create({
-        email,
         password: hashedPassword,
         ...rest,
       });
 
-      if (image) {
+      if (req.body.image) {
         await db.Imagies.create({
           userId: user.id,
-          imagePath: image,
+          imagePath: req.body.image,
         });
       }
 
@@ -75,19 +75,18 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_SUCCESS,
           StatusCodes.CREATED,
-          message.RESPONSE_SUCCESS,
+          message.REGISTER_SUCCESS,
           { id: user.id }
         )
       );
     } catch (error) {
-      logger.error(error);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
-          undefined,
-          error.message || error
+          error.message || error,
+          undefined
         )
       );
     }
@@ -95,38 +94,40 @@ module.exports = {
 
   login: async (req, res) => {
     try {
-      const { email, password } = req.body;
-
       const { error } = login_validation.validate(req.body);
 
       if (error) {
-        logger.error(message.VALIDATION_ERROR);
+        logger.error(error.details[0].message);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
-            undefined,
-            error.details[0].message
-          )
-        );
-      }
-
-      const user = await db.userModel.findOne({ where: { email } });
-
-      if (!user) {
-        logger.error(`User ${message.NOT_FOUND}`);
-        return res.json(
-          HandleResponse(
-            response.RESPONSE_ERROR,
-            StatusCodes.NOT_FOUND,
-            `User ${message.NOT_FOUND}`,
+            error.details[0].message,
             undefined
           )
         );
       }
 
-      const isPasswordCorrect = await bcrypt.compare(password, user.password);
+      const user = await db.userModel.findOne({
+        where: { email: req.body.email },
+      });
+
+      if (!user) {
+        logger.error(`Email ${message.NOT_EXIST}`);
+        return res.json(
+          HandleResponse(
+            response.RESPONSE_ERROR,
+            StatusCodes.NOT_FOUND,
+            `Email ${message.NOT_EXIST}`,
+            undefined
+          )
+        );
+      }
+
+      const isPasswordCorrect = await bcrypt.compare(
+        req.body.password,
+        user.password
+      );
 
       if (!isPasswordCorrect) {
         logger.error(message.INVALID_CREDENTIALS_PASS);
@@ -155,14 +156,13 @@ module.exports = {
         )
       );
     } catch (error) {
-      logger.error(error);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
-          undefined,
-          error.message || error
+          error.message || error,
+          undefined
         )
       );
     }
@@ -194,14 +194,13 @@ module.exports = {
         )
       );
     } catch (error) {
-      logger.error(error.message);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
-          undefined,
-          error.message || error
+          error.message || error,
+          undefined
         )
       );
     }
@@ -221,6 +220,8 @@ module.exports = {
           [db.Sequelize.Op.or]: [
             { firstName: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
             { lastName: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
+            { email: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
+            { phone: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
           ],
         };
       }
@@ -235,7 +236,7 @@ module.exports = {
         include: {
           model: db.Imagies,
           as: 'imagies',
-          attributes: ["imagePath"],
+          attributes: ['imagePath'],
         },
       });
 
@@ -254,21 +255,20 @@ module.exports = {
       logger.info(`Users ${message.GET_SUCCESS}`);
       return res.json(
         HandleResponse(
-          response.RESPONSE_ERROR,
+          response.RESPONSE_SUCCESS,
           StatusCodes.OK,
           `Users ${message.GET_SUCCESS}`,
           { users }
         )
       );
     } catch (error) {
-      logger.error(error.message);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
-          undefined,
-          error.message || error
+          error.message || error,
+          undefined
         )
       );
     }
@@ -295,25 +295,22 @@ module.exports = {
         );
       }
 
-      return res
-        .status(200)
-        .json(
-          HandleResponse(
-            response.RESPONSE_SUCCESS,
-            StatusCodes.OK,
-            `User ${message.GET_SUCCESS}`,
-            { user }
-          )
-        );
+      return res.json(
+        HandleResponse(
+          response.RESPONSE_SUCCESS,
+          StatusCodes.OK,
+          `User ${message.GET_SUCCESS}`,
+          { user }
+        )
+      );
     } catch (error) {
       logger.error(error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
-          undefined,
-          error.message || error
+          error.message || error,
+          undefined
         )
       );
     }
@@ -323,17 +320,16 @@ module.exports = {
     try {
       const { id } = req.user_data;
 
-      const { error } = update_Validation.validate( req.body );
+      const { error } = update_Validation.validate(req.body);
 
       if (error) {
-        logger.error(message.VALIDATION_ERROR);
+        logger.error(error.details[0].message);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
-            undefined,
             error.details[0].message,
+            undefined
           )
         );
       }
@@ -352,21 +348,25 @@ module.exports = {
         );
       }
 
-      await db.userModel.update(
-        req.body,
-        { where: { id: findUser.id } }
-      );
+      await db.userModel.update(req.body, { where: { id: findUser.id } });
 
       const updatedUser = await db.userModel.findOne({
         where: { id: findUser.id },
       });
 
       if (req.body.image) {
-        await db.Imagies.destroy({ where: { userId: updatedUser.id } });
-        await db.Imagies.create({
-          userId: updatedUser.id,
-          imagePath: req.body.image,
-        });
+        const image = await db.Imagies.findOne({ where: { userId: updatedUser.id } });
+        if(image){
+          await db.Imagies.update(
+            { imagePath: req.body.image },
+            { where: { userId: updatedUser.id } }
+          );
+        }else{
+          await db.Imagies.create({
+            userId: updatedUser.id,
+            imagePath: req.body.image,
+          });
+        }
       }
 
       logger.info(`User ${message.UPDATED_SUCCESS}`);
@@ -384,9 +384,8 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -396,17 +395,16 @@ module.exports = {
     try {
       const { id } = req.user_data;
 
-      const { error } = updatePassword_Validation.validate( req.body );
+      const { error } = updatePassword_Validation.validate(req.body);
 
       if (error) {
-        logger.error(message.VALIDATION_ERROR);
+        logger.error(error.details[0].message);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
+            error.details[0].message,
             undefined,
-            error.details[0].message
           )
         );
       }
@@ -425,8 +423,25 @@ module.exports = {
         );
       }
 
+      const isPasswordCorrect = await bcrypt.compare(
+        req.body.oldPassword,
+        user.password
+      );
+
+      if (!isPasswordCorrect) {
+        logger.error(message.INVALID_CREDENTIALS_PASS);
+        return res.json(
+          HandleResponse(
+            response.RESPONSE_ERROR,
+            StatusCodes.UNAUTHORIZED,
+            message.INVALID_CREDENTIALS_PASS,
+            undefined
+          )
+        );
+      }
+
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash( req.body.newPassword, salt );
+      const hashedPassword = await bcrypt.hash(req.body.newPassword, salt);
 
       await db.userModel.update(
         { password: hashedPassword },
@@ -448,9 +463,8 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -458,30 +472,31 @@ module.exports = {
 
   verifyEmail: async (req, res) => {
     try {
-      const { error } = emailValidate.validate( req.body );
+      const { error } = emailValidate.validate(req.body);
 
       if (error) {
-        logger.error(message.VALIDATION_ERROR);
+        logger.error(error.details[0].message);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
+            error.details[0].message,
             undefined,
-            error.details[0].message
           )
         );
       }
 
-      const user = await db.userModel.findOne({ where: { email: req.body.email } });
+      const user = await db.userModel.findOne({
+        where: { email: req.body.email },
+      });
 
       if (!user) {
-        logger.error(`User ${message.NOT_FOUND}`);
+        logger.error(`Email ${message.NOT_EXIST}`);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.NOT_FOUND,
-            `User ${message.NOT_FOUND}`,
+            `Email ${message.NOT_EXIST}`,
             undefined
           )
         );
@@ -489,12 +504,12 @@ module.exports = {
 
       await sendOTPToEmail(user.email);
 
-      logger.info(`${message.OTP_SENT} Email`);
+      logger.info(`${message.OTP_SENT} Email: ${user.email}`);
       return res.json(
         HandleResponse(
           response.RESPONSE_SUCCESS,
           StatusCodes.OK,
-          `${message.OTP_SENT} Email`,
+          `${message.OTP_SENT} Email: ${user.email}`,
           undefined
         )
       );
@@ -504,9 +519,8 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.OTP_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -517,48 +531,48 @@ module.exports = {
       const { error } = otp_validate.validate(req.body);
 
       if (error) {
-        logger.error(message.VALIDATION_ERROR);
+        logger.error(error.details[0].message);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
+            error.details[0].message,
             undefined,
-            error.details[0].message
           )
         );
       }
 
-      const user = await db.userModel.findOne({ where: { email: req.body.email } });
+      const user = await db.userModel.findOne({
+        where: { email: req.body.email },
+      });
 
       if (!user) {
-        logger.error(`User ${message.NOT_FOUND}`);
+        logger.error(`Email ${message.NOT_EXIST}`);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.NOT_FOUND,
-            `User ${message.NOT_FOUND}`,
+            `Email ${message.NOT_EXIST}`,
             undefined
           )
         );
       }
 
-      const otp_user = await db.OTPS.findOne({ where: { email: user.email } });
+      const otpData = await db.OTPS.findOne({ where: { email: user.email } });
 
-      if (!otp_user) {
-        await db.OTPS.destroy({ where: { email: user.email } });
-        logger.error(message.OTP_EXPIRED);
+      if (!otpData) {
+        logger.error(message.OTP_INVALID);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.OTP_EXPIRED,
+            message.OTP_INVALID,
             undefined
           )
         );
       }
 
-      if (otp_user.otp !== req.body.otp) {
+      if (otpData.otp !== req.body.otp) {
         await db.OTPS.destroy({ where: { email: user.email } });
         logger.error(message.OTP_INVALID);
         return res.json(
@@ -571,9 +585,9 @@ module.exports = {
         );
       }
 
-      const currentTime = new Date();
+      const currentTime = new Date(); 
 
-      if (otp_user.expiresAt < currentTime) {
+      if (otpData.expiresAt < currentTime) {
         await db.OTPS.destroy({ where: { email: user.email } });
         logger.error(message.OTP_EXPIRED);
         return res.json(
@@ -602,9 +616,8 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -615,34 +628,35 @@ module.exports = {
       const { error } = forgotPassword_validate.validate(req.body);
 
       if (error) {
-        logger.error(message.VALIDATION_ERROR);
+        logger.error(error.details[0].message);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
+            error.details[0].message,
             undefined,
-            error.details[0].message
           )
         );
       }
 
-      const user = await db.userModel.findOne({ where: { email: req.body.email } });
+      const user = await db.userModel.findOne({
+        where: { email: req.body.email },
+      });
 
       if (!user) {
-        logger.error(`User ${message.NOT_FOUND}`);
+        logger.error(`Email ${message.NOT_EXIST}`);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.NOT_FOUND,
-            `User ${message.NOT_FOUND}`,
+            `Email ${message.NOT_EXIST}`,
             undefined
           )
         );
       }
 
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash( req.body.newPassword, salt );
+      const hashedPassword = await bcrypt.hash(req.body.newPassword, salt);
 
       await db.userModel.update(
         { password: hashedPassword },
@@ -659,14 +673,13 @@ module.exports = {
         )
       );
     } catch (error) {
-      logger.error(error);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
