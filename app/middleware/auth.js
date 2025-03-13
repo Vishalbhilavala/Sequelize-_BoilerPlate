@@ -17,27 +17,26 @@ module.exports = {
           response.RESPONSE_ERROR,
           StatusCodes.NOT_FOUND,
           message.INVALID_CREDENTIALS_PASS,
-          undefined,
+          undefined
         )
       );
     }
 
     const secret = process.env.JWT_SECRET_KEY;
-    
+
     try {
       const token_validation = jwt.verify(token, secret);
       req.user_data = token_validation;
       next();
     } catch (error) {
-      logger.error(error);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.BAD_REQUEST,
-          message.INVALID_CREDENTIALS_PASS,
-          undefined,
           error || error.message,
-        ),
+          undefined
+        )
       );
     }
   },

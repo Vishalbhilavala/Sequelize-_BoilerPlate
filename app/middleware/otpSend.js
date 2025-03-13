@@ -36,7 +36,7 @@ async function sendOTPToEmail(email) {
             <p><b>Note: </b>Otp will expire in 5 Minutes</p>`,
           });
     } catch (error) {
-        logger.error(error);
+        logger.error(error.message || error) ;
     }
 }
 

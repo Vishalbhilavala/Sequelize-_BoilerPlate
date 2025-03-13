@@ -11,7 +11,7 @@ route.get('/getListOfUser', userModel.getListOfUser);
 route.get('/viewProfile', auth, userModel.viewProfile);
 route.put('/updateProfile', auth, userModel.updateProfile);
 route.put('/updatePassword', auth, userModel.updatePassword);
-route.post('/forgotPassword', userModel.forgotPassword);
+route.put('/forgotPassword', userModel.forgotPassword);
 route.post('/verifyEmail', userModel.verifyEmail);
 route.post('/verifyOTP', userModel.verifyOTP);
 

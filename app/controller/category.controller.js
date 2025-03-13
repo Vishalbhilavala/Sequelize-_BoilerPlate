@@ -10,47 +10,21 @@ const { categoryValidate } = require('../validation/categoryValidation');
 module.exports = {
   createCategory: async (req, res) => {
     try {
-      const { category_name } = req.body;
-
       const { error } = categoryValidate.validate(req.body);
 
       if (error) {
-        logger.error(message.VALIDATION_ERROR);
+        logger.error(error.details[0].message);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
+            error.details[0].message,
             undefined,
-            error.details[0].message
           )
         );
       }
 
-      const findCategory = await db.Category.findOne({
-        where: {
-          category_name: db.Sequelize.where(
-            db.Sequelize.fn('LOWER', db.Sequelize.col('category_name')),
-            category_name.toLowerCase()
-          ),
-        },
-      });
-
-      if (findCategory) {
-        logger.error(`Category ${message.ALREADY_EXIST}`);
-        return res.json(
-          HandleResponse(
-            response.RESPONSE_ERROR,
-            StatusCodes.BAD_REQUEST,
-            `Category ${message.ALREADY_EXIST}`,
-            undefined
-          )
-        );
-      }
-
-      const category = await db.Category.create({
-        category_name,
-      });
+      const addCategory = await db.Category.create(req.body);
 
       logger.info(`Category ${message.ADD_SUCCESS}`);
       return res.json(
@@ -58,18 +32,17 @@ module.exports = {
           response.RESPONSE_SUCCESS,
           StatusCodes.OK,
           `Category ${message.ADD_SUCCESS}`,
-          { id: category.id }
+          { id: addCategory.id }
         )
       );
     } catch (error) {
-      logger.error(error);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -118,19 +91,18 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.OK,
-          `Category ${message.GET_SUCCESS}`,
+          undefined,
           { Category: category }
         )
       );
     } catch (error) {
-      logger.error(error);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -158,19 +130,18 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_SUCCESS,
           StatusCodes.OK,
-          `Category ${message.GET_SUCCESS}`,
+          undefined,
           { Category: category }
         )
       );
     } catch (error) {
-      logger.error(error);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -179,18 +150,17 @@ module.exports = {
   updateCategory: async (req, res) => {
     try {
       const { id } = req.params;
-      
-      const { error } = categoryValidate.validate( req.body );
+
+      const { error } = categoryValidate.validate(req.body);
 
       if (error) {
-        logger.error(message.VALIDATION_ERROR);
+        logger.error(error.details[0].message);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            message.VALIDATION_ERROR,
+            error.details[0].message,
             undefined,
-            error.details[0].message
           )
         );
       }
@@ -198,21 +168,18 @@ module.exports = {
       const categoryExisted = await db.Category.findOne({ where: { id } });
 
       if (!categoryExisted) {
-        logger.error(`Category ${message.NOT_FOUND}`);
+        logger.error(`Category ${message.NOT_EXIST}`);
         return res.json(
           HandleResponse(
             response.RESPONSE_ERROR,
             StatusCodes.BAD_REQUEST,
-            `Category ${message.NOT_FOUND}`,
+            `Category ${message.NOT_EXIST}`,
             undefined
           )
         );
       }
 
-      await db.Category.update(
-        req.body,
-        { where: { id: categoryExisted.id } }
-      );
+      await db.Category.update(req.body, { where: { id: categoryExisted.id } });
 
       logger.info(`Category ${message.UPDATED_SUCCESS}`);
       return res.json(
@@ -224,14 +191,13 @@ module.exports = {
         )
       );
     } catch (error) {
-      logger.error(error);
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
-          response.RESPONSE_SUCCESS,
+          response.RESPONSE_ERROR,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
@@ -239,41 +205,40 @@ module.exports = {
 
   deleteCategory: async (req, res) => {
     try {
-        const { id } = req.params;
-        const category = await db.Category.findOne({ where: { id }});
+      const { id } = req.params;
+      const category = await db.Category.findOne({ where: { id } });
 
-        if(!category){
-            logger.error(`Category ${message.NOT_FOUND}`);
-            return res.json(
-                HandleResponse(
-                    response.RESPONSE_ERROR,
-                    StatusCodes.BAD_REQUEST,
-                    `Category ${message.NOT_FOUND}`,
-                    undefined,
-                )
-            )
-        }
-
-        await db.Category.destroy({ where: { id: category.id }})
-
-        logger.info(`Category ${ message.DELETE_SUCCESS }`);
+      if (!category) {
+        logger.error(`Category ${message.NOT_FOUND}`);
         return res.json(
-            HandleResponse(
-                response.RESPONSE_SUCCESS,
-                StatusCodes.OK,
-                `Category ${ message.DELETE_SUCCESS }`,
-                undefined
-            )
+          HandleResponse(
+            response.RESPONSE_ERROR,
+            StatusCodes.BAD_REQUEST,
+            `Category ${message.NOT_FOUND}`,
+            undefined
+          )
+        );
+      }
+
+      await db.Category.destroy({ where: { id: category.id } });
+
+      logger.info(`Category ${message.DELETE_SUCCESS}`);
+      return res.json(
+        HandleResponse(
+          response.RESPONSE_SUCCESS,
+          StatusCodes.OK,
+          `Category ${message.DELETE_SUCCESS}`,
+          undefined
         )
-    } catch (error) {   
-      logger.error(error);
+      );
+    } catch (error) {
+      logger.error(error.message || error);
       return res.json(
         HandleResponse(
           response.RESPONSE_SUCCESS,
           StatusCodes.INTERNAL_SERVER_ERROR,
-          message.INTERNAL_SERVER_ERROR,
+          error.message || error,
           undefined,
-          error.message || error
         )
       );
     }
