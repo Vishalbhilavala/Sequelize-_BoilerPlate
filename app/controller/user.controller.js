@@ -257,7 +257,7 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_SUCCESS,
           StatusCodes.OK,
-          `Users ${message.GET_SUCCESS}`,
+          undefined,
           { users }
         )
       );
@@ -299,7 +299,7 @@ module.exports = {
         HandleResponse(
           response.RESPONSE_SUCCESS,
           StatusCodes.OK,
-          `User ${message.GET_SUCCESS}`,
+          undefined,
           { user }
         )
       );
@@ -424,7 +424,7 @@ module.exports = {
       }
 
       const isPasswordCorrect = await bcrypt.compare(
-        req.body.oldPassword,
+        req.body.currentPassword,
         user.password
       );
 
@@ -573,7 +573,6 @@ module.exports = {
       }
 
       if (otpData.otp !== req.body.otp) {
-        await db.OTPS.destroy({ where: { email: user.email } });
         logger.error(message.OTP_INVALID);
         return res.json(
           HandleResponse(

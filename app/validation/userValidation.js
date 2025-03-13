@@ -120,7 +120,7 @@ const update_Validation = joi.object({
 });
 
 const updatePassword_Validation = joi.object({
-  oldPassword: joi.string().empty().required().messages({
+  currentPassword: joi.string().empty().required().messages({
     'string.base': 'oldPassword must be a string.',
     'string.empty': 'oldPassword cannot be empty.',
     'any.required': 'oldPassword is a required field.',
